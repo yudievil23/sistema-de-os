@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechRepair - Sistema de Ordens de Serviço</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a1a1a;
+            color: #e6e6e6;
+        }
+        
+        .concrete-bg {
+            background-color: #3a3a3a;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23424242' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .carousel {
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+        }
+        
+        .carousel-item {
+            scroll-snap-align: start;
+            flex: 0 0 auto;
+        }
+        
+        .status-pending {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .status-progress {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .status-completed {
+            border-left: 4px solid #10b981;
+        }
+        
+        .status-cancelled {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .checklist-item {
+            transition: all 0.2s ease;
+        }
+        
+        .checklist-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .photo-carousel {
+            position: relative;
+            height: 120px;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        
+        .photo-carousel-inner {
+            display: flex;
+            transition: transform 0.5s ease;
+            height: 100%;
+        }
+        
+        .photo-carousel-item {
+            flex: 0 0 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .photo-carousel-nav {
+            position: absolute;
+            bottom: 8px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        .photo-carousel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.5);
+            cursor: pointer;
+        }
+        
+        .photo-carousel-dot.active {
+            background-color: white;
+        }
+        
+        .slide-out {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+        
+        @keyframes slideOut {
+            to {
+                opacity: 0;
+                transform: translateY(20px);
+                height: 0;
+                margin-bottom: 0;
+                padding: 0;
+            }
+        }
+        
+        /* Estilos para o cabeçalho personalizável */
+        .header-edit-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .header-edit-btn:hover {
+            transform: rotate(90deg);
+        }
+        
+        .header-edit-modal {
+            transition: all 0.3s ease;
+        }
+        
+        .logo-preview {
+            max-height: 60px;
+            max-width: 200px;
+            object-fit: contain;
+        }
+        
+        /* Estilos para o PDF - Modelo de contrato simples */
+        .pdf-template {
+            display: none;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm;
+            background: white;
+            color: black;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0066cc;
+        }
+        
+        .pdf-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 5px;
+        }
+        
+        .pdf-subtitle {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .pdf-section {
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+        
+        .pdf-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 3px;
+        }
+        
+        .pdf-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        
+        .pdf-label {
+            width: 100px;
+            font-weight: bold;
+        }
+        
+        .pdf-value {
+            flex: 1;
+        }
+        
+        .pdf-checklist {
+            margin-left: 15px;
+        }
+        
+        .pdf-checklist-item {
+            margin-bottom: 3px;
+            position: relative;
+            padding-left: 15px;
+        }
+        
+        .pdf-checklist-item:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+        }
+        
+        .pdf-photos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .pdf-photo {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+        }
+        
+        .pdf-footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #0066cc;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .pdf-signature {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .pdf-signature-line {
+            width: 150px;
+            border-top: 1px solid #333;
+            text-align: center;
+            padding-top: 3px;
+            font-size: 12px;
+        }
+        
+        .pdf-values {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .pdf-value-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .pdf-total {
+            font-weight: bold;
+            font-size: 14px;
+            color: #0066cc;
+        }
+        
+        .pdf-observation {
+            font-size: 10px;
+            color: #666;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .pdf-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .pdf-left-column, .pdf-right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Login Screen Styles */
+        .login-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .login-box {
+            background-color: #2d3748;
+            border-radius: 12px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .login-title {
+            color: #f6ad55;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid #4a5568;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: #f6ad55;
+            box-shadow: 0 0 0 3px rgba(246, 173, 85, 0.2);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background-color: #f6ad55;
+            color: #1a202c;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .login-btn:hover {
+            background-color: #ed8936;
+        }
+        
+        .login-footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: #a0aec0;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h1 class="login-title">
+                <i class="fas fa-user-shield mr-2"></i> Acesso do Funcionário
+            </h1>
+            <form id="loginForm">
+                <input type="text" id="employeeName" class="login-input" placeholder="Digite seu nome" required>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Iniciar Sistema
+                </button>
+            </form>
+            <div class="login-footer">
+                TechRepair - Sistema de Gestão de Ordens de Serviço
+            </div>
+        </div>
+    </div>
+
+    <!-- Template para o PDF (invisível na página) -->
+    <div id="pdfTemplate" class="pdf-template">
+        <div class="pdf-header">
+            <h1 class="pdf-title">ORDEM DE SERVIÇO</h1>
+            <h2 class="pdf-subtitle">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h2>
+        </div>
+        
+        <div class="pdf-content">
+            <div class="pdf-left-column">
+                <div class="pdf-section">
+                    <div class="pdf-section-title">DADOS DO CLIENTE</div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Nome:</div>
+                        <div class="pdf-value" id="pdfClientName"></div>
+                    </div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Telefone:</div>
+                        <div class="pdf-value" id="pdfWhatsapp"></div>
+                    </div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Data:</div>
+                        <div class="pdf-value" id="pdfDate"></div>
+                    </div>
+                </div>
+                
+                <div class="pdf-section">
+                    <div class="pdf-section-title">EQUIPAMENTO</div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Tipo:</div>
+                        <div class="pdf-value" id="pdfDeviceType"></div>
+                    </div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Marca:</div>
+                        <div class="pdf-value" id="pdfBrand"></div>
+                    </div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Modelo:</div>
+                        <div class="pdf-value" id="pdfModel"></div>
+                    </div>
+                    <div class="pdf-row">
+                        <div class="pdf-label">Nº Série:</div>
+                        <div class="pdf-value" id="pdfImei"></div>
+                    </div>
+                </div>
+                
+                <div class="pdf-section">
+                    <div class="pdf-section-title">DESCRIÇÃO DO SERVIÇO</div>
+                    <div id="pdfServiceDescription" style="padding: 5px;"></div>
+                </div>
+                
+                <div class="pdf-section">
+                    <div class="pdf-section-title">PEÇAS TROCADAS</div>
+                    <div id="pdfReplacedPart" style="padding: 5px;"></div>
+                </div>
+            </div>
+                    
+            <div class="pdf-right-column">
+                <div class="pdf-section">
+                    <div class="pdf-section-title">CHECKLIST</div>
+                    <div id="pdfChecklist" class="pdf-checklist"></div>
+                </div>
+                
+                <div class="pdf-section">
+                    <div class="pdf-section-title">FOTOS DO EQUIPAMENTO</div>
+                    <div id="pdfPhotos" class="pdf-photos"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pdf-values">
+            <div class="pdf-section-title">VALORES</div>
+            <div class="pdf-value-row">
+                <span>Valor da peça:</span>
+                <span id="pdfPartValue"></span>
+            </div>
+            <div class="pdf-value-row">
+                <span>Taxa de serviço:</span>
+                <span id="pdfTaxValue"></span>
+            </div>
+            <div class="pdf-value-row pdf-total">
+                <span>TOTAL:</span>
+                <span id="pdfTotalValue"></span>
+            </div>
+        </div>
+        
+        <div class="pdf-observation">
+            <p>O equipamento será devolvido somente mediante a apresentação deste documento.</p>
+            <p>O prazo de garantia é de 90 dias para peças e 30 dias para mão de obra.</p>
+        </div>
+        
+        <div class="pdf-signature">
+            <div class="pdf-signature-line">Assinatura do Cliente</div>
+            <div class="pdf-signature-line">Responsável: <span id="pdfEmployeeName"></span></div>
+        </div>
+        
+        <div class="pdf-footer">
+            <div id="pdfStoreName" style="font-weight: bold; margin-bottom: 3px;"></div>
+            <div id="pdfStoreAddress" style="margin-bottom: 3px;"></div>
+            <div>Telefone: <span id="pdfStorePhone"></span> | E-mail: <span id="pdfStoreEmail"></span></div>
+        </div>
+    </div>
+
+    <!-- Modal de edição do cabeçalho -->
+    <div id="headerEditModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 rounded-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-200">Editar Cabeçalho</h2>
+                <button id="closeHeaderEditModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+                    
+            <form id="headerEditForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-300 mb-2">Nome da Loja</label>
+                    <input type="text" id="storeNameInput" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 mb-2">Logo da Loja</label>
+                    <div class="flex items-center space-x-4">
+                        <div id="logoPreviewContainer" class="flex items-center justify-center bg-gray-700 rounded-lg p-2">
+                            <img id="logoPreview" class="logo-preview hidden">
+                            <span id="noLogoText" class="text-gray-400">Nenhuma logo selecionada</span>
+                        </div>
+                        <label for="logoUpload" class="cursor-pointer inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
+                            <i class="fas fa-upload mr-2"></i> Escolher
+                            <input type="file" id="logoUpload" class="hidden" accept="image/*">
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 mb-2">Telefone</label>
+                    <input type="tel" id="storePhoneInput" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 mb-2">E-mail</label>
+                    <input type="email" id="storeEmailInput" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 mb-2">Endereço</label>
+                    <textarea id="storeAddressInput" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" id="cancelHeaderEdit" class="px-6 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application (Hidden until login) -->
+    <div id="appContainer" class="hidden">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Header Personalizável -->
+            <header class="mb-8 relative">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <div id="storeLogoContainer" class="flex items-center">
+                            <!-- Logo será inserida aqui pelo JavaScript -->
+                        </div>
+                        <div>
+                            <h1 id="storeName" class="text-3xl font-bold text-gray-200">
+                                <span class="text-amber-500">Tech</span>Repair
+                            </h1>
+                            <div id="storeContactInfo" class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400 mt-1">
+                                <!-- Informações de contato serão inseridas aqui -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4 items-center">
+                        <button id="headerEditBtn" class="header-edit-btn text-gray-400 hover:text-amber-500 p-2 rounded-full">
+                            <i class="fas fa-cog text-xl"></i>
+                        </button>
+                        <button id="newOrderBtn" class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center">
+                            <i class="fas fa-plus-circle mr-2"></i> Nova Ordem
+                        </button>
+                        <div class="relative">
+                            <select id="monthFilter" class="bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-4 py-2 appearance-none pr-8">
+                                <option value="all">Todos os meses</option>
+                                <option value="0">Janeiro</option>
+                                <option value="1">Fevereiro</option>
+                                <option value="2">Março</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Maio</option>
+                                <option value="5">Junho</option>
+                                <option value="6">Julho</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Setembro</option>
+                                <option value="9">Outubro</option>
+                                <option value="10">Novembro</option>
+                                <option value="11">Dezembro</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute top-0 right-0 text-sm text-gray-400">
+                    Usuário: <span id="currentEmployeeName" class="text-amber-400"></span>
+                </div>
+            </header>
+
+            <!-- Active Orders Panel (Only Pending) -->
+            <section class="mb-12">
+                <h2 class="text-xl font-semibold text-gray-300 mb-4 flex items-center">
+                    <i class="fas fa-tools mr-2 text-amber-500"></i> Ordens Ativas (Pendentes)
+                </h2>
+                <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                    <div id="activeOrdersCarousel" class="carousel flex overflow-x-auto space-x-6 pb-4">
+                        <!-- Active orders (pending) will be added here by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- New Order Modal -->
+            <div id="newOrderModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center hidden">
+                <div class="bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto concrete-bg shadow-2xl">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-200">Nova Ordem de Serviço</h2>
+                            <button id="closeModalBtn" class="text-gray-400 hover:text-white">
+                                <i class="fas fa-times text-2xl"></i>
+                            </button>
+                        </div>
+                                        
+                        <form id="orderForm" class="space-y-6">
+                            <input type="hidden" id="orderId">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="clientName" class="block text-gray-300 mb-2">Nome do Cliente</label>
+                                    <input type="text" id="clientName" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                                <div>
+                                    <label for="whatsapp" class="block text-gray-300 mb-2">Número do WhatsApp</label>
+                                    <input type="tel" id="whatsapp" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                            </div>
+                                                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label for="deviceType" class="block text-gray-300 mb-2">Tipo do Aparelho</label>
+                                    <select id="deviceType" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <option value="Celular">Celular</option>
+                                        <option value="Tablet">Tablet</option>
+                                        <option value="Computador">Computador</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="brand" class="block text-gray-300 mb-2">Marca</label>
+                                    <input type="text" id="brand" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                                <div>
+                                    <label for="model" class="block text-gray-300 mb-2">Modelo</label>
+                                    <input type="text" id="model" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                            </div>
+                                                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="imei" class="block text-gray-300 mb-2">IMEI/Serial</label>
+                                    <input type="text" id="imei" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                                <div>
+                                    <label for="status" class="block text-gray-300 mb-2">Status</label>
+                                    <select id="status" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <option value="pending">Pendente</option>
+                                        <option value="progress">Em andamento</option>
+                                        <option value="completed">Concluído</option>
+                                        <option value="cancelled">Cancelado</option>
+                                    </select>
+                                </div>
+                            </div>
+                                                            
+                            <div>
+                                <label for="clientReport" class="block text-gray-300 mb-2">Relato do Cliente</label>
+                                <textarea id="clientReport" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                            </div>
+                                                            
+                            <div>
+                                <label for="serviceDescription" class="block text-gray-300 mb-2">O que será feito</label>
+                                <textarea id="serviceDescription" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                            </div>
+                                                            
+                            <div>
+                                <label for="replacedPart" class="block text-gray-300 mb-2">Peça trocada</label>
+                                <input type="text" id="replacedPart" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            </div>
+                                                            
+                            <!-- Checklist Section -->
+                            <div class="border-t border-gray-700 pt-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-300">Checklist</h3>
+                                    <button type="button" id="addChecklistItem" class="text-amber-500 hover:text-amber-400 flex items-center">
+                                        <i class="fas fa-plus-circle mr-1"></i> Adicionar Item
+                                    </button>
+                                </div>
+                                                                
+                                <div id="checklistItems" class="space-y-3">
+                                    <div class="checklist-item flex items-center">
+                                        <input type="text" placeholder="Saúde da bateria (ex: 83%)" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="checklist-item flex items-center">
+                                        <input type="text" placeholder="Câmera frontal OK" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="checklist-item flex items-center">
+                                        <input type="text" placeholder="Câmera traseira OK" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="checklist-item flex items-center">
+                                        <input type="text" placeholder="Face ID OK" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="checklist-item flex items-center">
+                                        <input type="text" placeholder="Conector de carga OK" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                                                            
+                            <!-- Values Section -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-gray-700 pt-6">
+                                <div>
+                                    <label for="partValue" class="block text-gray-300 mb-2">Valor da peça trocada</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2 text-gray-400">R$</span>
+                                        <input type="number" id="partValue" class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="taxValue" class="block text-gray-300 mb-2">Valor de taxa</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2 text-gray-400">R$</span>
+                                        <input type="number" id="taxValue" class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="totalValue" class="block text-gray-300 mb-2">Valor total</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2 text-gray-400">R$</span>
+                                        <input type="number" id="totalValue" class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    </div>
+                                </div>
+                            </div>
+                                                            
+                            <!-- Date Section -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-gray-700 pt-6">
+                                <div>
+                                    <label for="entryDay" class="block text-gray-300 mb-2">Dia</label>
+                                    <input type="number" id="entryDay" min="1" max="31" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                                <div>
+                                    <label for="entryMonth" class="block text-gray-300 mb-2">Mês</label>
+                                    <select id="entryMonth" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        <option value="0">Janeiro</option>
+                                        <option value="1">Fevereiro</option>
+                                        <option value="2">Março</option>
+                                        <option value="3">Abril</option>
+                                        <option value="4">Maio</option>
+                                        <option value="5">Junho</option>
+                                        <option value="6">Julho</option>
+                                        <option value="7">Agosto</option>
+                                        <option value="8">Setembro</option>
+                                        <option value="9">Outubro</option>
+                                        <option value="10">Novembro</option>
+                                        <option value="11">Dezembro</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="entryYear" class="block text-gray-300 mb-2">Ano</label>
+                                    <input type="number" id="entryYear" min="2000" max="2100" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                            </div>
+                                                            
+                            <!-- Photos Section -->
+                            <div class="border-t border-gray-700 pt-6">
+                                <h3 class="text-lg font-semibold text-gray-300 mb-4">Fotos do Aparelho</h3>
+                                <div class="flex flex-wrap gap-4" id="photosPreview">
+                                    <!-- Photo previews will appear here -->
+                                </div>
+                                <div class="mt-4">
+                                    <label for="photoUpload" class="cursor-pointer inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
+                                        <i class="fas fa-camera mr-2"></i> Adicionar Fotos
+                                        <input type="file" id="photoUpload" class="hidden" accept="image/*" multiple>
+                                    </label>
+                                </div>
+                            </div>
+                                                            
+                            <div class="flex justify-end space-x-4 pt-6 border-t border-gray-700">
+                                <button type="button" id="cancelOrderBtn" class="px-6 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors flex items-center">
+                                    <i class="fas fa-save mr-2"></i> Salvar Ordem
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Catalog (All orders) -->
+            <section>
+                <h2 class="text-xl font-semibold text-gray-300 mb-4 flex items-center">
+                    <i class="fas fa-clipboard-list mr-2 text-amber-500"></i> Catálogo de Ordens
+                </h2>
+                <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                    <div id="ordersCarousel" class="carousel flex overflow-x-auto space-x-6 pb-4">
+                        <!-- All orders will be added here by JavaScript -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        // Variável global para armazenar o nome do funcionário
+        let currentEmployee = '';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // ==============================================
+            // CÓDIGO PARA O LOGIN DO FUNCIONÁRIO
+            // ==============================================
+            
+            const loginScreen = document.getElementById('loginScreen');
+            const loginForm = document.getElementById('loginForm');
+            const employeeNameInput = document.getElementById('employeeName');
+            const appContainer = document.getElementById('appContainer');
+            const currentEmployeeNameDisplay = document.getElementById('currentEmployeeName');
+            
+            // Evento de login
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const employeeName = employeeNameInput.value.trim();
+                if (employeeName) {
+                    currentEmployee = employeeName;
+                    currentEmployeeNameDisplay.textContent = employeeName;
+                    
+                    // Esconder tela de login e mostrar aplicação
+                    loginScreen.style.display = 'none';
+                    appContainer.classList.remove('hidden');
+                    
+                    // Carregar dados do sistema
+                    loadHeaderData();
+                    renderOrders();
+                }
+            });
+            
+            // ==============================================
+            // CÓDIGO PARA O CABEÇALHO PERSONALIZÁVEL
+            // ==============================================
+            
+            // Elementos do cabeçalho personalizável
+            const headerEditBtn = document.getElementById('headerEditBtn');
+            const headerEditModal = document.getElementById('headerEditModal');
+            const closeHeaderEditModal = document.getElementById('closeHeaderEditModal');
+            const cancelHeaderEdit = document.getElementById('cancelHeaderEdit');
+            const headerEditForm = document.getElementById('headerEditForm');
+            const logoUpload = document.getElementById('logoUpload');
+            const logoPreview = document.getElementById('logoPreview');
+            const noLogoText = document.getElementById('noLogoText');
+            const logoPreviewContainer = document.getElementById('logoPreviewContainer');
+            const storeNameInput = document.getElementById('storeNameInput');
+            const storePhoneInput = document.getElementById('storePhoneInput');
+            const storeEmailInput = document.getElementById('storeEmailInput');
+            const storeAddressInput = document.getElementById('storeAddressInput');
+            
+            // Elementos que exibem as informações na página
+            const storeName = document.getElementById('storeName');
+            const storeLogoContainer = document.getElementById('storeLogoContainer');
+            const storeContactInfo = document.getElementById('storeContactInfo');
+            
+            // Carregar dados salvos do localStorage
+            function loadHeaderData() {
+                const savedData = localStorage.getItem('storeHeaderData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    
+                    // Preencher o modal de edição
+                    storeNameInput.value = data.name || '';
+                    storePhoneInput.value = data.phone || '';
+                    storeEmailInput.value = data.email || '';
+                    storeAddressInput.value = data.address || '';
+                    
+                    // Preencher a visualização na página
+                    storeName.textContent = data.name || 'TechRepair';
+                    
+                    // Exibir logo se existir
+                    if (data.logo) {
+                        const logoImg = document.createElement('img');
+                        logoImg.src = data.logo;
+                        logoImg.alt = 'Logo da loja';
+                        logoImg.className = 'h-12 object-contain';
+                        storeLogoContainer.innerHTML = '';
+                        storeLogoContainer.appendChild(logoImg);
+                        
+                        // Preencher preview no modal
+                        logoPreview.src = data.logo;
+                        logoPreview.classList.remove('hidden');
+                        noLogoText.classList.add('hidden');
+                    }
+                    
+                    // Exibir informações de contato
+                    let contactHTML = '';
+                    if (data.phone) contactHTML += `<span><i class="fas fa-phone-alt mr-1"></i> ${data.phone}</span>`;
+                    if (data.email) contactHTML += `<span><i class="fas fa-envelope mr-1"></i> ${data.email}</span>`;
+                    if (data.address) contactHTML += `<span><i class="fas fa-map-marker-alt mr-1"></i> ${data.address}</span>`;
+                    
+                    storeContactInfo.innerHTML = contactHTML;
+                }
+            }
+            
+            // Salvar dados no localStorage
+            function saveHeaderData() {
+                const data = {
+                    name: storeNameInput.value,
+                    phone: storePhoneInput.value,
+                    email: storeEmailInput.value,
+                    address: storeAddressInput.value,
+                    logo: logoPreview.src || ''
+                };
+                
+                localStorage.setItem('storeHeaderData', JSON.stringify(data));
+                loadHeaderData(); // Atualizar a exibição
+            }
+            
+            // Evento para abrir o modal de edição
+            headerEditBtn.addEventListener('click', () => {
+                headerEditModal.classList.remove('hidden');
+            });
+            
+            // Evento para fechar o modal de edição
+            closeHeaderEditModal.addEventListener('click', () => {
+                headerEditModal.classList.add('hidden');
+            });
+            
+            // Evento para cancelar edição
+            cancelHeaderEdit.addEventListener('click', () => {
+                headerEditModal.classList.add('hidden');
+            });
+            
+            // Evento para upload da logo
+            logoUpload.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        logoPreview.src = event.target.result;
+                        logoPreview.classList.remove('hidden');
+                        noLogoText.classList.add('hidden');
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Evento para salvar as alterações
+            headerEditForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveHeaderData();
+                headerEditModal.classList.add('hidden');
+            });
+            
+            // ==============================================
+            // CÓDIGO ORIGINAL DO SISTEMA DE ORDENS DE SERVIÇO
+            // ==============================================
+            
+            // Sample data for demonstration
+            let orders = [
+                {
+                    id: 1,
+                    clientName: "João Silva",
+                    whatsapp: "(11) 98765-4321",
+                    deviceType: "Celular",
+                    brand: "Apple",
+                    model: "iPhone 12",
+                    imei: "123456789012345",
+                    clientReport: "Tela quebrada após queda",
+                    serviceDescription: "Troca de tela LCD",
+                    replacedPart: "Tela LCD original",
+                    status: "pending",
+                    checklist: [
+                        "Saúde da bateria: 85%",
+                        "Câmera frontal OK",
+                        "Face ID OK"
+                    ],
+                    values: {
+                        part: 450.00,
+                        tax: 50.00,
+                        total: 500.00
+                    },
+                    photos: [
+                        "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+                        "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80"
+                    ],
+                    date: new Date(2023, 4, 21) // May 21, 2023
+                },
+                {
+                    id: 2,
+                    clientName: "Maria Oliveira",
+                    whatsapp: "(11) 91234-5678",
+                    deviceType: "Celular",
+                    brand: "Samsung",
+                    model: "Galaxy S21",
+                    imei: "987654321098765",
+                    clientReport: "Não carrega mais",
+                    serviceDescription: "Troca do conector de carga",
+                    replacedPart: "Conector USB-C",
+                    status: "progress",
+                    checklist: [
+                        "Saúde da bateria: 92%",
+                        "Conector de carga OK"
+                    ],
+                    values: {
+                        part: 120.00,
+                        tax: 30.00,
+                        total: 150.00
+                    },
+                    photos: [
+                        "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+                        "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+                        "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80"
+                    ],
+                    date: new Date(2023, 5, 10) // June 10, 2023
+                },
+                {
+                    id: 3,
+                    clientName: "Carlos Souza",
+                    whatsapp: "(11) 99876-5432",
+                    deviceType: "Tablet",
+                    brand: "Apple",
+                    model: "iPad Pro 11\"",
+                    imei: "567890123456789",
+                    clientReport: "Bateria não dura o dia todo",
+                    serviceDescription: "Troca de bateria",
+                    replacedPart: "Bateria original",
+                    status: "completed",
+                    checklist: [
+                        "Saúde da bateria: 100%",
+                        "Câmera traseira OK"
+                    ],
+                    values: {
+                        part: 380.00,
+                        tax: 70.00,
+                        total: 450.00
+                    },
+                    photos: [
+                        "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80"
+                    ],
+                    date: new Date(2023, 4, 5) // May 5, 2023
+                }
+            ];
+
+            // DOM Elements
+            const newOrderBtn = document.getElementById('newOrderBtn');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const cancelOrderBtn = document.getElementById('cancelOrderBtn');
+            const newOrderModal = document.getElementById('newOrderModal');
+            const orderForm = document.getElementById('orderForm');
+            const monthFilter = document.getElementById('monthFilter');
+            const activeOrdersCarousel = document.getElementById('activeOrdersCarousel');
+            const ordersCarousel = document.getElementById('ordersCarousel');
+            const addChecklistItem = document.getElementById('addChecklistItem');
+            const checklistItems = document.getElementById('checklistItems');
+            const photoUpload = document.getElementById('photoUpload');
+            const photosPreview = document.getElementById('photosPreview');
+            const entryDay = document.getElementById('entryDay');
+            const entryMonth = document.getElementById('entryMonth');
+            const entryYear = document.getElementById('entryYear');
+            const orderIdInput = document.getElementById('orderId');
+
+            // Set current date as default
+            const today = new Date();
+            entryDay.value = today.getDate();
+            entryMonth.value = today.getMonth();
+            entryYear.value = today.getFullYear();
+
+            // Modal control
+            newOrderBtn.addEventListener('click', () => {
+                orderIdInput.value = '';
+                orderForm.reset();
+                checklistItems.innerHTML = '';
+                photosPreview.innerHTML = '';
+                newOrderModal.classList.remove('hidden');
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                newOrderModal.classList.add('hidden');
+            });
+
+            cancelOrderBtn.addEventListener('click', () => {
+                newOrderModal.classList.add('hidden');
+            });
+
+            // Add new checklist item
+            addChecklistItem.addEventListener('click', () => {
+                const newItem = document.createElement('div');
+                newItem.className = 'checklist-item flex items-center fade-in';
+                newItem.innerHTML = `
+                    <input type="text" placeholder="Novo item" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                checklistItems.appendChild(newItem);
+                
+                // Add event to delete button
+                newItem.querySelector('.delete-checklist-item').addEventListener('click', () => {
+                    newItem.remove();
+                });
+            });
+
+            // Photo upload preview
+            photoUpload.addEventListener('change', function(e) {
+                photosPreview.innerHTML = '';
+                
+                for (let i = 0; i < e.target.files.length; i++) {
+                    const file = e.target.files[i];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        const photoPreview = document.createElement('div');
+                        photoPreview.className = 'relative w-24 h-24 rounded-lg overflow-hidden';
+                        photoPreview.innerHTML = `
+                            <img src="${event.target.result}" class="w-full h-full object-cover">
+                            <button type="button" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                        photosPreview.appendChild(photoPreview);
+                        
+                        // Add event to delete photo button
+                        photoPreview.querySelector('button').addEventListener('click', () => {
+                            photoPreview.remove();
+                        });
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Form submission
+            orderForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form values
+                const day = parseInt(entryDay.value) || today.getDate();
+                const month = parseInt(entryMonth.value) || today.getMonth();
+                const year = parseInt(entryYear.value) || today.getFullYear();
+                const status = document.getElementById('status').value;
+
+                const orderData = {
+                    id: orderIdInput.value ? parseInt(orderIdInput.value) : orders.length + 1,
+                    clientName: document.getElementById('clientName').value,
+                    whatsapp: document.getElementById('whatsapp').value,
+                    deviceType: document.getElementById('deviceType').value,
+                    brand: document.getElementById('brand').value,
+                    model: document.getElementById('model').value,
+                    imei: document.getElementById('imei').value,
+                    clientReport: document.getElementById('clientReport').value,
+                    serviceDescription: document.getElementById('serviceDescription').value,
+                    replacedPart: document.getElementById('replacedPart').value,
+                    status: status,
+                    checklist: Array.from(checklistItems.querySelectorAll('input')).map(input => input.value),
+                    values: {
+                        part: parseFloat(document.getElementById('partValue').value) || 0,
+                        tax: parseFloat(document.getElementById('taxValue').value) || 0,
+                        total: parseFloat(document.getElementById('totalValue').value) || 0
+                    },
+                    photos: [], // In a real app, you would upload these to a server
+                    date: new Date(year, month, day),
+                    employee: currentEmployee // Adiciona o nome do funcionário à ordem
+                };
+
+                // Add uploaded photos (in a real app, these would be uploaded to a server)
+                const photoPreviews = photosPreview.querySelectorAll('img');
+                photoPreviews.forEach(img => {
+                    orderData.photos.push(img.src); // Just using the preview URL for demo
+                });
+
+                // Check if we're editing an existing order
+                if (orderIdInput.value) {
+                    // Find and update the existing order
+                    const orderIndex = orders.findIndex(o => o.id === parseInt(orderIdInput.value));
+                    if (orderIndex !== -1) {
+                        orders[orderIndex] = orderData;
+                    }
+                } else {
+                    // Add new order
+                    orders.push(orderData);
+                }
+
+                // Update UI
+                renderOrders();
+
+                // Close modal and reset form
+                newOrderModal.classList.add('hidden');
+                orderForm.reset();
+                checklistItems.innerHTML = '';
+                photosPreview.innerHTML = '';
+
+                // Reset date to current
+                entryDay.value = today.getDate();
+                entryMonth.value = today.getMonth();
+                entryYear.value = today.getFullYear();
+
+                // Show success message
+                alert('Ordem salva com sucesso!');
+            });
+
+            // Filter by month
+            monthFilter.addEventListener('change', function() {
+                renderOrders();
+            });
+
+            // Render orders in carousels
+            function renderOrders() {
+                // Clear carousels
+                activeOrdersCarousel.innerHTML = '';
+                ordersCarousel.innerHTML = '';
+                
+                // Filter orders by month if needed
+                const selectedMonth = monthFilter.value;
+                let filteredOrders = [...orders];
+                
+                if (selectedMonth !== 'all') {
+                    filteredOrders = orders.filter(order => order.date.getMonth() == selectedMonth);
+                }
+                
+                // Separate active orders (only pending)
+                const activeOrders = filteredOrders.filter(order => order.status === 'pending');
+                
+                // Render active orders
+                activeOrders.forEach(order => {
+                    const orderCard = createOrderCard(order);
+                    activeOrdersCarousel.appendChild(orderCard);
+                });
+                
+                // Render all orders
+                filteredOrders.forEach(order => {
+                    const orderCard = createOrderCard(order);
+                    ordersCarousel.appendChild(orderCard);
+                });
+                
+                // Start photo carousels
+                startPhotoCarousels();
+            }
+            
+            // Create order card element
+            function createOrderCard(order) {
+                const statusClass = {
+                    'pending': 'status-pending',
+                    'progress': 'status-progress',
+                    'completed': 'status-completed',
+                    'cancelled': 'status-cancelled'
+                }[order.status];
+                
+                const statusText = {
+                    'pending': 'Pendente',
+                    'progress': 'Em Andamento',
+                    'completed': 'Concluído',
+                    'cancelled': 'Cancelado'
+                }[order.status];
+                
+                const statusColor = {
+                    'pending': 'bg-amber-500',
+                    'progress': 'bg-blue-500',
+                    'completed': 'bg-green-500',
+                    'cancelled': 'bg-red-500'
+                }[order.status];
+                
+                const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                const orderMonth = monthNames[order.date.getMonth()];
+                const orderDay = order.date.getDate();
+                const orderYear = order.date.getFullYear();
+                
+                const orderCard = document.createElement('div');
+                orderCard.className = `carousel-item w-72 flex-shrink-0 ${statusClass} bg-gray-700 rounded-lg p-4 shadow-md`;
+                orderCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-semibold text-gray-200 truncate">${order.clientName}</h3>
+                        <span class="text-xs ${statusColor} text-white px-2 py-1 rounded-full">${statusText}</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mb-1">${order.deviceType} ${order.brand} ${order.model}</p>
+                    <p class="text-xs text-gray-500 mb-3">${orderDay} de ${orderMonth} ${orderYear}</p>
+                    
+                    ${order.photos.length > 0 ? `
+                    <div class="photo-carousel mb-3">
+                        <div class="photo-carousel-inner">
+                            ${order.photos.map(photo => `
+                                <div class="photo-carousel-item" style="background-image: url('${photo}')"></div>
+                            `).join('')}
+                        </div>
+                        <div class="photo-carousel-nav">
+                            ${order.photos.map((_, index) => `
+                                <div class="photo-carousel-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : '<div class="h-24 bg-gray-600 rounded-lg mb-3 flex items-center justify-center text-gray-400"><i class="fas fa-camera fa-2x"></i></div>'}
+                    
+                    <div class="text-sm text-gray-300 mb-2">
+                        <span class="font-medium">Serviço:</span> ${order.serviceDescription}
+                    </div>
+                    <div class="text-sm text-gray-300 mb-3">
+                        <span class="font-medium">Peça:</span> ${order.replacedPart}
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-amber-500">R$ ${order.values.total.toFixed(2)}</span>
+                        <div class="flex space-x-2">
+                            <button class="edit-order text-blue-400 hover:text-blue-300" data-id="${order.id}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="generate-pdf text-green-400 hover:text-green-300" data-id="${order.id}">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button class="delete-order text-red-400 hover:text-red-300" data-id="${order.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Add edit and delete event listeners
+                orderCard.querySelector('.edit-order')?.addEventListener('click', () => editOrder(order.id));
+                orderCard.querySelector('.delete-order')?.addEventListener('click', () => deleteOrder(order.id));
+                orderCard.querySelector('.generate-pdf')?.addEventListener('click', () => generatePDF(order.id));
+                
+                return orderCard;
+            }
+            
+            // Start auto-scrolling for all photo carousels
+            function startPhotoCarousels() {
+                document.querySelectorAll('.photo-carousel').forEach(carousel => {
+                    const inner = carousel.querySelector('.photo-carousel-inner');
+                    const items = carousel.querySelectorAll('.photo-carousel-item');
+                    const dots = carousel.querySelectorAll('.photo-carousel-dot');
+                    
+                    if (items.length <= 1) return; // No need for carousel with 1 or 0 items
+                    
+                    let currentIndex = 0;
+                    const itemCount = items.length;
+                    
+                    // Set initial position
+                    inner.style.transform = `translateX(-${currentIndex * 100}%)`;
+                    
+                    // Auto-scroll every 3 seconds
+                    const interval = setInterval(() => {
+                        currentIndex = (currentIndex + 1) % itemCount;
+                        inner.style.transform = `translateX(-${currentIndex * 100}%)`;
+                        
+                        // Update dots
+                        dots.forEach((dot, index) => {
+                            dot.classList.toggle('active', index === currentIndex);
+                        });
+                    }, 3000);
+                    
+                    // Pause on hover
+                    carousel.addEventListener('mouseenter', () => {
+                        clearInterval(interval);
+                    });
+                    
+                    // Resume when mouse leaves
+                    carousel.addEventListener('mouseleave', () => {
+                        startPhotoCarousels(); // Restart all carousels
+                    });
+                    
+                    // Dot navigation
+                    dots.forEach(dot => {
+                        dot.addEventListener('click', () => {
+                            currentIndex = parseInt(dot.dataset.index);
+                            inner.style.transform = `translateX(-${currentIndex * 100}%)`;
+                            
+                            // Update dots
+                            dots.forEach((d, index) => {
+                                d.classList.toggle('active', index === currentIndex);
+                            });
+                        });
+                    });
+                });
+            }
+            
+            // Edit order
+            function editOrder(id) {
+                const order = orders.find(o => o.id === id);
+                if (!order) return;
+                
+                // Fill form with order data
+                orderIdInput.value = order.id;
+                document.getElementById('clientName').value = order.clientName;
+                document.getElementById('whatsapp').value = order.whatsapp;
+                document.getElementById('deviceType').value = order.deviceType;
+                document.getElementById('brand').value = order.brand;
+                document.getElementById('model').value = order.model;
+                document.getElementById('imei').value = order.imei;
+                document.getElementById('clientReport').value = order.clientReport;
+                document.getElementById('serviceDescription').value = order.serviceDescription;
+                document.getElementById('replacedPart').value = order.replacedPart;
+                document.getElementById('status').value = order.status;
+                
+                // Fill date
+                entryDay.value = order.date.getDate();
+                entryMonth.value = order.date.getMonth();
+                entryYear.value = order.date.getFullYear();
+                
+                // Fill checklist
+                checklistItems.innerHTML = '';
+                order.checklist.forEach(item => {
+                    const newItem = document.createElement('div');
+                    newItem.className = 'checklist-item flex items-center fade-in';
+                    newItem.innerHTML = `
+                        <input type="text" value="${item}" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <button type="button" class="delete-checklist-item ml-2 text-red-500 hover:text-red-400">
+                            <i class="fas fa-trash"></i>
+                            </button>
+                    `;
+                    checklistItems.appendChild(newItem);
+                    
+                    // Add event to delete button
+                    newItem.querySelector('.delete-checklist-item').addEventListener('click', () => {
+                        newItem.remove();
+                    });
+                });
+                
+                // Fill values
+                document.getElementById('partValue').value = order.values.part;
+                document.getElementById('taxValue').value = order.values.tax;
+                document.getElementById('totalValue').value = order.values.total;
+                
+                // Fill photos (in a real app, you would need to handle file uploads differently)
+                photosPreview.innerHTML = '';
+                order.photos.forEach(photo => {
+                    const photoPreview = document.createElement('div');
+                    photoPreview.className = 'relative w-24 h-24 rounded-lg overflow-hidden';
+                    photoPreview.innerHTML = `
+                        <img src="${photo}" class="w-full h-full object-cover">
+                        <button type="button" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    photosPreview.appendChild(photoPreview);
+                    
+                    // Add event to delete photo button
+                    photoPreview.querySelector('button').addEventListener('click', () => {
+                        photoPreview.remove();
+                    });
+                });
+                
+                // Open modal
+                newOrderModal.classList.remove('hidden');
+            }
+            
+            // Delete order
+            function deleteOrder(id) {
+                if (confirm('Tem certeza que deseja excluir esta ordem?')) {
+                    orders = orders.filter(order => order.id !== id);
+                    renderOrders();
+                }
+            }
+            
+            // Generate PDF for an order
+            function generatePDF(orderId) {
+                const order = orders.find(o => o.id === orderId);
+                if (!order) return;
+
+                // Get store info from localStorage
+                const storeData = JSON.parse(localStorage.getItem('storeHeaderData')) || {};
+                
+                // Fill PDF template with order data
+                document.getElementById('pdfStoreName').textContent = storeData.name || 'TechRepair';
+                document.getElementById('pdfStoreAddress').textContent = storeData.address || '';
+                document.getElementById('pdfStorePhone').textContent = storeData.phone || '';
+                document.getElementById('pdfStoreEmail').textContent = storeData.email || '';
+                
+                document.getElementById('pdfClientName').textContent = order.clientName;
+                document.getElementById('pdfWhatsapp').textContent = order.whatsapp;
+                
+                const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                const orderDate = `${order.date.getDate()} de ${monthNames[order.date.getMonth()]} de ${order.date.getFullYear()}`;
+                document.getElementById('pdfDate').textContent = orderDate;
+                
+                document.getElementById('pdfDeviceType').textContent = order.deviceType;
+                document.getElementById('pdfBrand').textContent = order.brand;
+                document.getElementById('pdfModel').textContent = order.model;
+                document.getElementById('pdfImei').textContent = order.imei;
+                
+                document.getElementById('pdfServiceDescription').textContent = order.serviceDescription;
+                document.getElementById('pdfReplacedPart').textContent = order.replacedPart;
+                
+                // Fill employee name in PDF
+                document.getElementById('pdfEmployeeName').textContent = order.employee || currentEmployee;
+                
+                // Fill checklist
+                const checklistContainer = document.getElementById('pdfChecklist');
+                checklistContainer.innerHTML = '';
+                order.checklist.forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'pdf-checklist-item';
+                    itemElement.textContent = item;
+                    checklistContainer.appendChild(itemElement);
+                });
+                
+                // Fill values in the highlighted section
+                document.getElementById('pdfPartValue').textContent = `R$ ${order.values.part.toFixed(2)}`;
+                document.getElementById('pdfTaxValue').textContent = `R$ ${order.values.tax.toFixed(2)}`;
+                document.getElementById('pdfTotalValue').textContent = `R$ ${order.values.total.toFixed(2)}`;
+                
+                // Fill photos
+                const photosContainer = document.getElementById('pdfPhotos');
+                photosContainer.innerHTML = '';
+                order.photos.forEach(photo => {
+                    const img = document.createElement('img');
+                    img.src = photo;
+                    img.className = 'pdf-photo';
+                    photosContainer.appendChild(img);
+                });
+                
+                // Generate PDF
+                const pdfTemplate = document.getElementById('pdfTemplate');
+                
+                // Temporarily show the template for html2canvas
+                pdfTemplate.style.display = 'block';
+                
+                html2canvas(pdfTemplate, {
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true
+                }).then(canvas => {
+                    // Hide the template again
+                    pdfTemplate.style.display = 'none';
+                    
+                    // Create PDF
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = 210; // A4 width in mm
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                    
+                    // Save the PDF
+                    pdf.save(`Ordem_Servico_${order.clientName.replace(/\s+/g, '_')}.pdf`);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
